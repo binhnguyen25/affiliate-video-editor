@@ -306,6 +306,9 @@ label input, label select, label textarea { margin-top: 0.25rem; font-weight: 40
 #captionText { min-height: 180px; }
 #downloadVideo { display: inline-block; margin-top: 0.6rem; text-decoration: none; }
 
+/* Thuộc tính hidden phải luôn thắng display (nếu không bảng Kết nối sẽ hiện mãi và nút ✕ đóng không được) */
+[hidden] { display: none !important; }
+
 /* ---------- Modal ---------- */
 .modal {
   position: fixed;
