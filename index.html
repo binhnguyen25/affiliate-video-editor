@@ -200,6 +200,22 @@
       <button type="button" id="btnNewProject" class="btn btn-primary">＋ Tạo dự án</button>
     </div>
     <div id="projectList" class="project-list"></div>
+
+    <hr>
+    <h3>📋 Board GitHub Projects</h3>
+    <p class="hint">App sẽ tạo 1 board <strong>“Video Affiliate”</strong> trên GitHub của bạn, có cột Trạng thái: Ý tưởng → Đang làm → Chờ xuất → Đã đăng. Mỗi video đưa lên board thành 1 thẻ. Mở board lên, bấm <strong>Board</strong> để xem dạng Kanban theo cột Trạng thái (GitHub không cho app tự tạo sẵn dạng Board, bạn bấm 1 lần là xong).</p>
+    <p class="hint" id="ghBoardStatus">Chưa có board — bấm “Tạo board GitHub” (cần nhập token GitHub trong mục Kết nối trước).</p>
+    <div class="row">
+      <button type="button" id="btnCreateGhBoard" class="btn btn-primary">＋ Tạo board GitHub</button>
+      <select id="ghStatusSelect" aria-label="Trạng thái video trên board">
+        <option value="Ý tưởng">Ý tưởng</option>
+        <option value="Đang làm">Đang làm</option>
+        <option value="Chờ xuất">Chờ xuất</option>
+        <option value="Đã đăng">Đã đăng</option>
+      </select>
+      <button type="button" id="btnAddToGhBoard" class="btn">＋ Thêm video này lên board</button>
+      <a id="ghBoardLink" class="btn" href="#" target="_blank" rel="noopener" hidden>Mở board trên GitHub ↗</a>
+    </div>
   </div>
 </div>
 
@@ -269,6 +285,21 @@
         <div class="row">
           <button type="button" id="btnCheckPexels" class="btn">Kiểm tra kết nối</button>
           <span id="pexelsStatus" class="conn-status">Chưa nối key.</span>
+        </div>
+      </div>
+
+      <div class="conn-card">
+        <h4>🐙 GitHub — tạo board Projects</h4>
+        <p class="hint">Để app tự tạo board GitHub Projects và đưa video lên board, bạn cần Personal Access Token (classic) có quyền <strong>project</strong>. Tạo tại github.com → bấm ảnh đại diện → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic) → tick <strong>project</strong> → Generate token. Token chỉ lưu trong trình duyệt của bạn, chỉ gọi tới api.github.com khi bạn bấm dùng.</p>
+        <label>Base URL
+          <input type="url" id="ghBase" value="https://api.github.com/graphql">
+        </label>
+        <label>Personal Access Token
+          <input type="password" id="ghKey" placeholder="Dán token GitHub (ghp_...)" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="button" id="btnCheckGh" class="btn">Kiểm tra kết nối</button>
+          <span id="ghStatus" class="conn-status">Chưa nối GitHub.</span>
         </div>
       </div>
     </div>

@@ -104,8 +104,30 @@ const DEFAULT_CONNECTIONS = {
   aiLab: { baseUrl: 'https://www.videoslash.com/api', key: '' },
   suno: { baseUrl: 'https://api.ttapi.io', key: '' },
   openrouter: { baseUrl: 'https://openrouter.ai/api/v1', key: '' },
-  pexels: { baseUrl: 'https://api.pexels.com/v1', key: '' }
+  pexels: { baseUrl: 'https://api.pexels.com/v1', key: '' },
+  github: { baseUrl: 'https://api.github.com/graphql', key: '' }
 };
+
+const LS_GH_BOARD = 'eva_gh_board_v1';
+const LS_GH_ITEMS = 'eva_gh_items_v1'; // { projectId (video) -> itemId (thẻ trên board) }
+const GH_BOARD_TITLE = 'Video Affiliate';
+const GH_STATUS_OPTIONS = [
+  { name: 'Ý tưởng', color: 'GRAY', description: 'Mới nghĩ ra' },
+  { name: 'Đang làm', color: 'YELLOW', description: 'Đang dựng video' },
+  { name: 'Chờ xuất', color: 'BLUE', description: 'Đã dựng xong, chờ xuất' },
+  { name: 'Đã đăng', color: 'GREEN', description: 'Đã đăng lên Facebook' }
+];
+let ghBoard = loadGhBoard();
+let ghItems = loadGhItems();
+
+function loadGhBoard() {
+  try { return JSON.parse(localStorage.getItem(LS_GH_BOARD) || 'null'); } catch (e) { return null; }
+}
+function saveGhBoard() { localStorage.setItem(LS_GH_BOARD, JSON.stringify(ghBoard)); }
+function loadGhItems() {
+  try { return JSON.parse(localStorage.getItem(LS_GH_ITEMS) || '{}') || {}; } catch (e) { return {}; }
+}
+function saveGhItems() { localStorage.setItem(LS_GH_ITEMS, JSON.stringify(ghItems)); }
 
 let projects = [];
 let current = null;              // dự án đang mở
@@ -1049,6 +1071,8 @@ function fillConnectionInputs() {
   $('#orBase').value = connections.openrouter.baseUrl;
   $('#orKey').value = connections.openrouter.key;
   $('#pexelsKey').value = connections.pexels.key;
+  $('#ghBase').value = connections.github.baseUrl;
+  $('#ghKey').value = connections.github.key;
 }
 
 function setConnStatus(el, kind, msg) {
@@ -1153,6 +1177,134 @@ async function checkPexels() {
     setConnStatus(statusEl, 'ok', 'Đã nối Pexels.');
   } catch (e) {
     setConnStatus(statusEl, 'bad', 'Chưa nối được: ' + e.message);
+  }
+}
+
+/* ---------------- GitHub — tạo board Projects ---------------- */
+async function ghGraphQL(query, variables) {
+  const key = (connections.github.key || '').trim();
+  if (!key) throw new Error('Chưa nhập token GitHub — bấm “Kết nối” ở góc trên để nhập.');
+  const base = (connections.github.baseUrl || 'https://api.github.com/graphql').replace(/\/$/, '');
+  const res = await fetch(base, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify({ query, variables: variables || {} })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('GitHub trả về lỗi ' + res.status + (data && data.message ? ': ' + data.message : ''));
+  if (data.errors && data.errors.length) throw new Error(data.errors[0].message || 'GitHub báo lỗi.');
+  return data.data;
+}
+
+async function checkGitHub() {
+  const statusEl = $('#ghStatus');
+  const key = (connections.github.key || '').trim();
+  if (!key) { setConnStatus(statusEl, 'warn', 'Chưa nhập token.'); return; }
+  setConnStatus(statusEl, '', 'Đang kiểm tra...');
+  try {
+    const data = await ghGraphQL('query { viewer { login id } }');
+    setConnStatus(statusEl, 'ok', 'Đã nối GitHub: @' + data.viewer.login + '.');
+  } catch (e) {
+    setConnStatus(statusEl, 'bad', 'Chưa nối được: ' + e.message);
+  }
+}
+
+function renderGhBoardStatus() {
+  const el = $('#ghBoardStatus');
+  const link = $('#ghBoardLink');
+  if (ghBoard && ghBoard.url) {
+    el.textContent = 'Board: “' + ghBoard.title + '” — đã tạo trên GitHub.';
+    link.href = ghBoard.url;
+    link.hidden = false;
+  } else {
+    el.textContent = 'Chưa có board — bấm “Tạo board GitHub” (cần nhập token GitHub trong mục Kết nối trước).';
+    link.hidden = true;
+  }
+}
+
+async function ensureGhBoard() {
+  if (!ghBoard) {
+    const me = await ghGraphQL('query { viewer { id login } }');
+    const created = await ghGraphQL(
+      'mutation($ownerId: ID!, $title: String!) { createProjectV2(input: {ownerId: $ownerId, title: $title}) { projectV2 { id number url title } } }',
+      { ownerId: me.viewer.id, title: GH_BOARD_TITLE }
+    );
+    const pv = created.createProjectV2.projectV2;
+    ghBoard = { projectId: pv.id, number: pv.number, url: pv.url, title: pv.title, statusFieldId: null, options: [] };
+    saveGhBoard();
+  }
+  if (!ghBoard.statusFieldId) {
+    const field = await ghGraphQL(
+      'mutation($projectId: ID!, $name: String!, $dataType: ProjectV2CustomFieldType!, $options: [ProjectV2SingleSelectFieldOptionInput!]) { createProjectV2Field(input: {projectId: $projectId, name: $name, dataType: $dataType, singleSelectOptions: $options}) { projectV2Field { ... on ProjectV2SingleSelectField { id name options { id name } } } } }',
+      { projectId: ghBoard.projectId, name: 'Trạng thái', dataType: 'SINGLE_SELECT', options: GH_STATUS_OPTIONS }
+    );
+    const f = field.createProjectV2Field.projectV2Field;
+    ghBoard.statusFieldId = f.id;
+    ghBoard.options = f.options || [];
+    saveGhBoard();
+  }
+  return ghBoard;
+}
+
+async function createGhBoard() {
+  const el = $('#ghBoardStatus');
+  try {
+    el.textContent = 'Đang tạo board trên GitHub...';
+    const b = await ensureGhBoard();
+    renderGhBoardStatus();
+    showToast('Đã tạo board “' + b.title + '” trên GitHub.');
+  } catch (e) {
+    el.textContent = 'Tạo board thất bại: ' + e.message;
+    showToast('Tạo board thất bại: ' + e.message);
+  }
+}
+
+function projectBoardBody(p) {
+  const lines = [];
+  if (p.product && p.product.name) lines.push('Sản phẩm: ' + p.product.name);
+  if (p.product && (p.product.price || p.product.promo)) lines.push('Giá: ' + (p.product.price || '') + (p.product.promo ? ' → KM ' + p.product.promo : ''));
+  if (p.product && p.product.link) lines.push('Link: ' + p.product.link);
+  lines.push('Số cảnh: ' + p.scenes.length + ' · Tổng thời lượng: ' + p.scenes.reduce((s, x) => s + (Number(x.duration) || 0), 0) + 's');
+  lines.push('Làm bằng Edit Video Affiliate.');
+  return lines.join('\n');
+}
+
+async function setGhItemStatus(board, itemId, statusName) {
+  const opt = (board.options || []).find((o) => o.name === statusName);
+  if (!opt) return;
+  await ghGraphQL(
+    'mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) { updateProjectV2ItemFieldValue(input: {projectId: $projectId, itemId: $itemId, fieldId: $fieldId, value: {singleSelectOptionId: $optionId}}) { projectV2Item { id } } }',
+    { projectId: board.projectId, itemId, fieldId: board.statusFieldId, optionId: opt.id }
+  );
+}
+
+async function addCurrentToGhBoard() {
+  if (!current) { showToast('Chưa mở dự án nào.'); return; }
+  const statusName = $('#ghStatusSelect').value || 'Ý tưởng';
+  const el = $('#ghBoardStatus');
+  try {
+    el.textContent = 'Đang đưa video lên board...';
+    const b = await ensureGhBoard();
+    const existingItemId = ghItems[current.id];
+    if (existingItemId) {
+      await setGhItemStatus(b, existingItemId, statusName);
+      renderGhBoardStatus();
+      showToast('Đã cập nhật trạng thái “' + statusName + '” cho video này trên board.');
+      return;
+    }
+    const added = await ghGraphQL(
+      'mutation($projectId: ID!, $title: String!, $body: String) { addProjectV2DraftIssue(input: {projectId: $projectId, title: $title, body: $body}) { projectItem { id } } }',
+      { projectId: b.projectId, title: current.name, body: projectBoardBody(current) }
+    );
+    const itemId = added.addProjectV2DraftIssue.projectItem.id;
+    await setGhItemStatus(b, itemId, statusName);
+    ghItems[current.id] = itemId;
+    saveGhItems();
+    renderGhBoardStatus();
+    showToast('Đã thêm video “' + current.name + '” lên board (' + statusName + ').');
+  } catch (e) {
+    el.textContent = 'Đưa lên board thất bại: ' + e.message;
+    showToast('Đưa lên board thất bại: ' + e.message);
   }
 }
 
@@ -1402,7 +1554,7 @@ function bindStaticEvents() {
 
   /* --- Header: dự án & kết nối --- */
   $('#projectSelect').addEventListener('change', (e) => { switchProject(e.target.value); });
-  $('#btnProjects').addEventListener('click', () => { renderProjectList(); openModal('projectsModal'); });
+  $('#btnProjects').addEventListener('click', () => { renderProjectList(); renderGhBoardStatus(); openModal('projectsModal'); });
   $('#btnConnections').addEventListener('click', () => { fillConnectionInputs(); openModal('connectionsModal'); });
   $$('[data-close]').forEach((b) => b.addEventListener('click', () => closeModal(b.dataset.close)));
   $$('.modal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; }));
@@ -1441,7 +1593,8 @@ function bindStaticEvents() {
     ['aiBase', 'aiLab', 'baseUrl'], ['aiKey', 'aiLab', 'key'],
     ['sunoBase', 'suno', 'baseUrl'], ['sunoKey', 'suno', 'key'],
     ['orBase', 'openrouter', 'baseUrl'], ['orKey', 'openrouter', 'key'],
-    ['pexelsKey', 'pexels', 'key']
+    ['pexelsKey', 'pexels', 'key'],
+    ['ghBase', 'github', 'baseUrl'], ['ghKey', 'github', 'key']
   ];
   connFields.forEach(([inputId, svc, field]) => {
     $('#' + inputId).addEventListener('change', () => {
@@ -1454,4 +1607,7 @@ function bindStaticEvents() {
   $('#btnCheckSuno').addEventListener('click', checkSuno);
   $('#btnCheckOr').addEventListener('click', checkOpenRouter);
   $('#btnCheckPexels').addEventListener('click', checkPexels);
+  $('#btnCheckGh').addEventListener('click', checkGitHub);
+  $('#btnCreateGhBoard').addEventListener('click', createGhBoard);
+  $('#btnAddToGhBoard').addEventListener('click', addCurrentToGhBoard);
 }
