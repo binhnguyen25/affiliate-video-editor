@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Video Affiliate — Nhập ảnh, làm storyboard, cắt timeline, xuất video 9:16</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-icon">🎬</span>
+    <div>
+      <h1>Edit Video Affiliate</h1>
+      <p class="brand-sub">Nhập ảnh → Storyboard → Timeline → Xuất video 9:16</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <select id="projectSelect" title="Chọn dự án"></select>
+    <button id="btnProjects" class="btn btn-ghost" type="button">📁 Dự án</button>
+    <button id="btnConnections" class="btn btn-ghost" type="button">🔌 Kết nối</button>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Các bước làm video">
+  <button type="button" class="step-tab active" data-step="images">1. Nhập ảnh</button>
+  <button type="button" class="step-tab" data-step="storyboard">2. Storyboard</button>
+  <button type="button" class="step-tab" data-step="timeline">3. Timeline &amp; nhạc</button>
+  <button type="button" class="step-tab" data-step="export">4. Xuất video</button>
+</nav>
+
+<main>
+  <!-- ============ BƯỚC 1: NHẬP ẢNH ============ -->
+  <section id="step-images" class="step-panel active">
+    <h2>1. Nhập ảnh</h2>
+    <p class="hint">Ảnh bạn đưa vào sẽ lưu trong trình duyệt (IndexedDB) nên không bị mất khi tải lại trang. Ảnh không gửi lên máy chủ nào cả.</p>
+
+    <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Chọn ảnh từ máy">
+      <div class="drop-icon">🖼️</div>
+      <p><strong>Kéo thả ảnh vào đây</strong> hoặc bấm để chọn nhiều ảnh cùng lúc</p>
+      <p class="hint">Chấp nhận JPG, PNG, WebP, GIF</p>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    </div>
+
+    <div class="row">
+      <input type="url" id="urlInput" placeholder="Dán link ảnh (https://...) rồi bấm Thêm ảnh" aria-label="Link ảnh">
+      <button type="button" id="btnAddUrl" class="btn btn-primary">Thêm ảnh từ link</button>
+    </div>
+
+    <h3>Thư viện ảnh của bạn (<span id="imageCount">0</span>)</h3>
+    <div id="imageGrid" class="image-grid"></div>
+    <p id="libraryEmpty" class="hint">Chưa có ảnh nào. Hãy tải ảnh lên hoặc tìm ảnh bên dưới.</p>
+
+    <h3>🔎 Tìm / tạo thêm ảnh</h3>
+    <div class="find-box">
+      <div class="find-col">
+        <h4>Tìm ảnh stock — Pexels</h4>
+        <p class="hint" id="pexelsKeyStatus">Chưa nối key Pexels.</p>
+        <div class="row">
+          <input type="text" id="pexelsQuery" placeholder="Ví dụ: máy xay sinh tố, cô gái cười..." aria-label="Từ khóa tìm ảnh">
+          <button type="button" id="btnSearchPexels" class="btn btn-primary">Tìm ảnh</button>
+        </div>
+        <div id="pexelsResults" class="search-results"></div>
+      </div>
+      <div class="find-col">
+        <h4>✨ Tạo ảnh từ mô tả — OpenRouter</h4>
+        <p class="hint" id="orKeyStatus">Chưa nối key OpenRouter.</p>
+        <textarea id="genPrompt" rows="3" placeholder="Mô tả ảnh cần tạo, ví dụ: cô gái trẻ cười tươi cầm máy xay sinh tố trong bếp sáng, ảnh thật, dọc 9:16"></textarea>
+        <div class="row">
+          <input type="text" id="genModel" value="google/gemini-2.5-flash-image" aria-label="Tên model tạo ảnh" title="Tên model tạo ảnh trên OpenRouter">
+          <button type="button" id="btnGenerateImage" class="btn btn-primary">Tạo ảnh</button>
+        </div>
+        <p class="hint">Model mặc định dùng ảnh AI. Bạn có thể đổi tên model khác trên OpenRouter.</p>
+        <div id="genResult" class="search-results"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BƯỚC 2: STORYBOARD ============ -->
+  <section id="step-storyboard" class="step-panel">
+    <h2>2. Storyboard</h2>
+    <p class="hint">Mỗi cảnh là một ảnh + một câu chữ + thời lượng. Kéo thả để đổi thứ tự, hoặc dùng nút ↑ ↓. Thay đổi ở đây sẽ đồng bộ sang Timeline.</p>
+
+    <div class="row">
+      <select id="addSceneImage" aria-label="Chọn ảnh để thêm cảnh"></select>
+      <button type="button" id="btnAddScene" class="btn btn-primary">＋ Thêm cảnh từ ảnh đã chọn</button>
+    </div>
+
+    <div id="sceneList" class="scene-list"></div>
+    <p id="storyboardEmpty" class="hint">Chưa có cảnh nào. Hãy thêm ảnh ở bước 1, rồi bấm “＋ Thêm cảnh” ở đây.</p>
+  </section>
+
+  <!-- ============ BƯỚC 3: TIMELINE & NHẠC ============ -->
+  <section id="step-timeline" class="step-panel">
+    <h2>3. Timeline &amp; nhạc nền</h2>
+    <p class="hint">Bấm vào một clip trên timeline để sửa thời lượng và chữ hiển thị. Kéo thả clip để đổi thứ tự.</p>
+
+    <div class="timeline-layout">
+      <div class="preview-col">
+        <canvas id="previewCanvas" width="720" height="1280"></canvas>
+        <div class="player-controls">
+          <button type="button" id="btnPlay" class="btn btn-primary">▶ Phát xem trước</button>
+          <span id="timeLabel">0:00 / 0:00</span>
+        </div>
+        <div id="progressBar" class="progress-bar" title="Bấm để tua">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="timeline-col">
+        <h3>Timeline</h3>
+        <div id="timelineTrack" class="timeline-track"></div>
+        <p id="timelineEmpty" class="hint">Chưa có clip nào — thêm cảnh ở bước Storyboard trước.</p>
+
+        <div id="clipEditor" class="clip-editor" hidden>
+          <h4>✏️ Sửa clip đang chọn: <span id="clipInfo"></span></h4>
+          <label>Thời lượng (giây)
+            <input type="number" id="clipDuration" min="1" max="30" step="0.5" value="3">
+          </label>
+          <label>Chữ hiển thị trên màn hình
+            <input type="text" id="clipText" placeholder="Ví dụ: Máy xay PHUN sinh tố lên mặt Vy!">
+          </label>
+          <button type="button" id="btnDeleteClip" class="btn btn-danger">Xóa clip này</button>
+        </div>
+
+        <h3>🎵 Nhạc nền</h3>
+        <div class="music-box">
+          <input type="file" id="musicInput" accept="audio/*" hidden>
+          <button type="button" id="btnPickMusic" class="btn">Chọn file nhạc (mp3)</button>
+          <span id="musicName" class="hint">Chưa có nhạc nền.</span>
+          <label class="volume-row">Âm lượng
+            <input type="range" id="musicVolume" min="0" max="1" step="0.05" value="0.8">
+            <span id="musicVolumeLabel">80%</span>
+          </label>
+          <button type="button" id="btnRemoveMusic" class="btn btn-ghost">Gỡ nhạc</button>
+          <p class="hint">Nhạc phát cùng bản xem trước. Khi xuất video, nhạc sẽ cháy vào video nếu trình duyệt hỗ trợ.</p>
+        </div>
+        <audio id="musicAudio" preload="auto"></audio>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BƯỚC 4: XUẤT VIDEO ============ -->
+  <section id="step-export" class="step-panel">
+    <h2>4. Xuất video</h2>
+
+    <h3>🛒 Thẻ sản phẩm affiliate</h3>
+    <div class="product-form">
+      <label>Tên món
+        <input type="text" id="productName" placeholder="Ví dụ: Máy xay sinh tố mini">
+      </label>
+      <label>Giá gốc
+        <input type="text" id="productPrice" placeholder="Ví dụ: 599.000đ">
+      </label>
+      <label>Giá khuyến mãi
+        <input type="text" id="productPromo" placeholder="Ví dụ: 399.000đ">
+      </label>
+      <label>Link Shopee của món
+        <input type="url" id="productLink" placeholder="https://s.shopee.vn/...">
+      </label>
+    </div>
+    <p class="hint">Tên món + giá KM sẽ hiện dạng chữ nổi ở góc dưới video. Link Shopee sẽ đưa vào caption.</p>
+
+    <h3>🎬 Xuất video</h3>
+    <p class="hint"><strong>Lưu ý:</strong> video xuất ra dạng <strong>WebM</strong> (.webm), khung dọc 9:16, 720×1280, 30fps. Quá trình xuất chạy theo thời gian thực — video dài 30 giây thì mất khoảng 30 giây để xuất. Bạn có thể đăng file WebM trực tiếp lên Facebook.</p>
+    <div class="row">
+      <button type="button" id="btnExport" class="btn btn-primary btn-big">⬇ Xuất video .webm</button>
+    </div>
+    <div id="exportProgress" class="progress-bar" hidden>
+      <div id="exportFill" class="progress-fill"></div>
+    </div>
+    <p id="exportStatus" class="hint"></p>
+    <a id="downloadVideo" class="btn btn-primary" hidden download="video-affiliate.webm">⬇ Tải video vừa xuất</a>
+
+    <h3>📣 Caption Facebook</h3>
+    <p class="hint">Caption tự tạo từ câu mở đầu của cảnh đầu tiên + thông tin món + hashtag #xuhuong #cute #baby và link Shopee TopGia.</p>
+    <div class="row">
+      <button type="button" id="btnMakeCaption" class="btn">Tạo caption</button>
+      <button type="button" id="btnCopyCaption" class="btn">📋 Sao chép caption</button>
+      <button type="button" id="btnDownloadCaption" class="btn">⬇ Tải caption (.txt)</button>
+    </div>
+    <textarea id="captionText" rows="9" placeholder="Bấm “Tạo caption” để xem caption ở đây..."></textarea>
+  </section>
+</main>
+
+<!-- ============ MODAL DỰ ÁN ============ -->
+<div id="projectsModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>📁 Dự án của bạn</h3>
+      <button type="button" class="btn btn-ghost" data-close="projectsModal">✕</button>
+    </div>
+    <p class="hint">Dự án tự động lưu trong trình duyệt. Mở dự án nào thì làm tiếp dự án đó.</p>
+    <div class="row">
+      <input type="text" id="newProjectName" placeholder="Tên dự án mới...">
+      <button type="button" id="btnNewProject" class="btn btn-primary">＋ Tạo dự án</button>
+    </div>
+    <div id="projectList" class="project-list"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL KẾT NỐI ============ -->
+<div id="connectionsModal" class="modal" hidden>
+  <div class="modal-card modal-wide">
+    <div class="modal-head">
+      <h3>🔌 Kết nối dịch vụ ngoài (API key)</h3>
+      <button type="button" class="btn btn-ghost" data-close="connectionsModal">✕</button>
+    </div>
+    <p class="hint"><strong>Key chỉ lưu trong trình duyệt của bạn</strong> (localStorage), không gửi đi đâu ngoài API của chính dịch vụ đó khi bạn bấm dùng. Không bao giờ dán key vào chat hay gửi cho ai.</p>
+    <p class="hint">💡 Ghi chú: tên “Avid Lab” và “Zuno” là do bạn đọc bằng giọng nói — mình đoán là <strong>AI Lab (Videoslash)</strong> cho công cụ video và <strong>Suno</strong> cho nhạc nền. Nếu đoán sai, bạn sửa lại base URL trong ô bên dưới là dùng được đúng dịch vụ bạn muốn.</p>
+
+    <div class="conn-grid">
+      <div class="conn-card">
+        <h4>🎥 AI Lab — Videoslash</h4>
+        <p class="hint">Công cụ video: upscale, lipsync, dịch video, reshoot. Cần gói đăng ký Videoslash đang hoạt động thì mới chạy được công cụ.</p>
+        <label>Base URL
+          <input type="url" id="aiBase" value="https://www.videoslash.com/api">
+        </label>
+        <label>API key
+          <input type="password" id="aiKey" placeholder="Dán API key Videoslash vào đây" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="button" id="btnCheckAi" class="btn">Kiểm tra kết nối</button>
+          <span id="aiStatus" class="conn-status">Chưa nối key.</span>
+        </div>
+        <div id="aiTools" class="hint"></div>
+      </div>
+
+      <div class="conn-card">
+        <h4>🎵 Suno — nhạc nền</h4>
+        <p class="hint">Suno chưa có API chính thức mở rộng, nên dùng qua nhà cung cấp bên thứ ba (gợi ý: TTAPI, APIMart, Kunavo). Nhập base URL của nhà cung cấp bạn dùng + key của họ.</p>
+        <label>Base URL nhà cung cấp
+          <input type="url" id="sunoBase" value="https://api.ttapi.io">
+        </label>
+        <label>API key
+          <input type="password" id="sunoKey" placeholder="Dán API key của nhà cung cấp Suno" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="button" id="btnCheckSuno" class="btn">Kiểm tra kết nối</button>
+          <span id="sunoStatus" class="conn-status">Chưa nối key.</span>
+        </div>
+      </div>
+
+      <div class="conn-card">
+        <h4>🖼️ OpenRouter — tạo ảnh</h4>
+        <p class="hint">Tạo ảnh từ mô tả bằng model ảnh trên OpenRouter (mặc định: google/gemini-2.5-flash-image). Key của riêng bạn trên openrouter.ai.</p>
+        <label>Base URL
+          <input type="url" id="orBase" value="https://openrouter.ai/api/v1">
+        </label>
+        <label>API key
+          <input type="password" id="orKey" placeholder="Dán API key OpenRouter (sk-or-...)" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="button" id="btnCheckOr" class="btn">Kiểm tra kết nối</button>
+          <span id="orStatus" class="conn-status">Chưa nối key.</span>
+        </div>
+      </div>
+
+      <div class="conn-card">
+        <h4>📷 Pexels — tìm ảnh stock</h4>
+        <p class="hint">Tìm ảnh stock miễn phí trên Pexels. Key lấy miễn phí tại pexels.com/api (tạo tài khoản rồi bấm “Your API Key”).</p>
+        <label>API key
+          <input type="password" id="pexelsKey" placeholder="Dán API key Pexels vào đây" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="button" id="btnCheckPexels" class="btn">Kiểm tra kết nối</button>
+          <span id="pexelsStatus" class="conn-status">Chưa nối key.</span>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Bấm “Kiểm tra kết nối” để app gọi thử một yêu cầu nhẹ tới dịch vụ và báo đã nối hay chưa. Key tự lưu ngay khi bạn gõ xong.</p>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
