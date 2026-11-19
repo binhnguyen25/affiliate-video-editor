@@ -52,11 +52,13 @@
     <div id="imageGrid" class="image-grid"></div>
     <p id="libraryEmpty" class="hint">Chưa có ảnh nào. Hãy tải ảnh lên hoặc tìm ảnh bên dưới.</p>
 
-    <h3>🔎 Tìm / tạo thêm ảnh</h3>
+    <details class="find-details">
+      <summary>🔎 Tìm / tạo thêm ảnh <span class="hint">(không bắt buộc — cần key, mở ra khi nào bạn cần)</span></summary>
+      <p class="hint">Chỉ dùng khi bạn muốn tìm ảnh stock hoặc tạo ảnh từ mô tả. Không cần key vẫn làm video bình thường bằng ảnh bạn đưa vào ở trên.</p>
     <div class="find-box">
       <div class="find-col">
         <h4>Tìm ảnh stock — Pexels</h4>
-        <p class="hint" id="pexelsKeyStatus">Chưa nối key Pexels.</p>
+        <p class="hint" id="pexelsKeyStatus">Chưa nối key — không bắt buộc.</p>
         <div class="row">
           <input type="text" id="pexelsQuery" placeholder="Ví dụ: máy xay sinh tố, cô gái cười..." aria-label="Từ khóa tìm ảnh">
           <button type="button" id="btnSearchPexels" class="btn btn-primary">Tìm ảnh</button>
@@ -65,7 +67,7 @@
       </div>
       <div class="find-col">
         <h4>✨ Tạo ảnh từ mô tả — OpenRouter</h4>
-        <p class="hint" id="orKeyStatus">Chưa nối key OpenRouter.</p>
+        <p class="hint" id="orKeyStatus">Chưa nối key — không bắt buộc.</p>
         <textarea id="genPrompt" rows="3" placeholder="Mô tả ảnh cần tạo, ví dụ: cô gái trẻ cười tươi cầm máy xay sinh tố trong bếp sáng, ảnh thật, dọc 9:16"></textarea>
         <div class="row">
           <input type="text" id="genModel" value="google/gemini-2.5-flash-image" aria-label="Tên model tạo ảnh" title="Tên model tạo ảnh trên OpenRouter">
@@ -75,6 +77,7 @@
         <div id="genResult" class="search-results"></div>
       </div>
     </div>
+    </details>
   </section>
 
   <!-- ============ BƯỚC 2: STORYBOARD ============ -->

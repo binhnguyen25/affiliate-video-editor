@@ -415,13 +415,13 @@ function handleFiles(files) {
 /* ---------------- Tìm ảnh stock — Pexels ---------------- */
 function pexelsKeyMissing() {
   const el = $('#pexelsKeyStatus');
-  el.textContent = 'Chưa nối key Pexels — bấm “Kết nối” ở góc trên để nhập key, rồi quay lại tìm ảnh.';
+  el.textContent = 'Chưa nối key Pexels — mục này không bắt buộc, đưa ảnh của bạn vào ở trên là đủ dùng. Khi nào cần thì bấm “Kết nối” ở góc trên để nhập key.';
   el.classList.add('warn');
 }
 
 async function searchPexels() {
   const key = (connections.pexels.key || '').trim();
-  if (!key) { pexelsKeyMissing(); openModal('connectionsModal'); return; }
+  if (!key) { pexelsKeyMissing(); showToast('Mục này cần key Pexels mới tìm được. Bạn cứ đưa ảnh của mình vào là đủ dùng.'); return; }
   const q = $('#pexelsQuery').value.trim();
   if (!q) { showToast('Nhập từ khóa cần tìm, ví dụ: máy xay sinh tố.'); return; }
   const box = $('#pexelsResults');
@@ -450,13 +450,13 @@ async function searchPexels() {
 /* ---------------- Tạo ảnh từ mô tả — OpenRouter ---------------- */
 function orKeyMissing() {
   const el = $('#orKeyStatus');
-  el.textContent = 'Chưa nối key OpenRouter — bấm “Kết nối” ở góc trên để nhập key, rồi quay lại tạo ảnh.';
+  el.textContent = 'Chưa nối key OpenRouter — mục này không bắt buộc, đưa ảnh của bạn vào ở trên là đủ dùng. Khi nào cần thì bấm “Kết nối” ở góc trên để nhập key.';
   el.classList.add('warn');
 }
 
 async function generateImage() {
   const key = (connections.openrouter.key || '').trim();
-  if (!key) { orKeyMissing(); openModal('connectionsModal'); return; }
+  if (!key) { orKeyMissing(); showToast('Mục này cần key OpenRouter mới tạo được. Bạn cứ đưa ảnh của mình vào là đủ dùng.'); return; }
   const prompt = $('#genPrompt').value.trim();
   if (!prompt) { showToast('Nhập mô tả ảnh cần tạo trước đã.'); return; }
   const model = $('#genModel').value.trim() || 'google/gemini-2.5-flash-image';
@@ -1063,7 +1063,7 @@ function updateKeyStatuses() {
     px.textContent = 'Đã nối key Pexels.';
     px.classList.remove('warn');
   } else {
-    px.textContent = 'Chưa nối key Pexels — bấm “Kết nối” ở góc trên để nhập key.';
+    px.textContent = 'Chưa nối key — không bắt buộc, đưa ảnh của bạn vào là đủ dùng.';
     px.classList.add('warn');
   }
   const or = $('#orKeyStatus');
@@ -1071,7 +1071,7 @@ function updateKeyStatuses() {
     or.textContent = 'Đã nối key OpenRouter.';
     or.classList.remove('warn');
   } else {
-    or.textContent = 'Chưa nối key OpenRouter — bấm “Kết nối” ở góc trên để nhập key.';
+    or.textContent = 'Chưa nối key — không bắt buộc, đưa ảnh của bạn vào là đủ dùng.';
     or.classList.add('warn');
   }
 }

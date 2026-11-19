@@ -165,6 +165,10 @@ label input, label select, label textarea { margin-top: 0.25rem; font-weight: 40
 .image-card .img-actions { display: flex; gap: 0.3rem; padding: 0.4rem 0.5rem 0.55rem; }
 .image-card .img-actions .btn { flex: 1; padding: 0.35rem 0.3rem; font-size: 0.82rem; }
 
+.find-details { margin-top: 1rem; }
+.find-details summary { cursor: pointer; font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; }
+.find-details summary .hint { font-weight: 400; }
+
 .find-box {
   display: grid;
   grid-template-columns: 1fr 1fr;
