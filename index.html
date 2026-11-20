@@ -90,6 +90,19 @@
       <button type="button" id="btnAddScene" class="btn btn-primary">＋ Thêm cảnh từ ảnh đã chọn</button>
     </div>
 
+    <div class="ai-box">
+      <h3>✨ Tạo storyboard bằng AI</h3>
+      <p class="hint">Gõ mô tả video hoặc sản phẩm, AI sẽ viết sẵn các cảnh: chữ/thoại + thời lượng từng cảnh. Cần key OpenRouter (nhập trong mục “Kết nối”). Muse không có API riêng nên app dùng AI qua OpenRouter.</p>
+      <textarea id="aiStoryboardIdea" rows="2" placeholder="Ví dụ: Máy xay sinh tố — Vy quên vặn nắp, sinh tố phun lên mặt, rồi xay êm, cuối cười giới thiệu sản phẩm"></textarea>
+      <div class="row">
+        <input type="number" id="aiStoryboardCount" min="2" max="8" step="1" value="4" aria-label="Số cảnh" title="Số cảnh">
+        <input type="text" id="aiStoryboardModel" value="google/gemini-2.5-flash" aria-label="Tên model AI" title="Tên model AI trên OpenRouter">
+        <button type="button" id="btnAiStoryboard" class="btn btn-primary">✨ Tạo storyboard bằng AI</button>
+      </div>
+      <p class="hint">Số cảnh mặc định 4. Model mặc định dùng AI viết chữ; bạn có thể đổi tên model khác trên OpenRouter.</p>
+      <p class="hint" id="aiStoryboardStatus">Chưa tạo — AI sẽ viết cảnh, bạn gắn ảnh vào từng cảnh sau (hoặc tạo ảnh trước ở bước 1).</p>
+    </div>
+
     <div id="sceneList" class="scene-list"></div>
     <p id="storyboardEmpty" class="hint">Chưa có cảnh nào. Hãy thêm ảnh ở bước 1, rồi bấm “＋ Thêm cảnh” ở đây.</p>
   </section>

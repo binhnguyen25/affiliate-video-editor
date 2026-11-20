@@ -526,6 +526,71 @@ async function generateImage() {
   }
 }
 
+/* ---------------- Tạo storyboard bằng AI — OpenRouter chat ---------------- */
+async function generateStoryboardAI() {
+  const key = (connections.openrouter.key || '').trim();
+  if (!key) { orKeyMissing(); showToast('Cần key OpenRouter mới tạo storyboard bằng AI. Bấm “Kết nối” ở góc trên để nhập key.'); return; }
+  const idea = $('#aiStoryboardIdea').value.trim();
+  if (!idea) { showToast('Gõ mô tả video / sản phẩm trước đã.'); return; }
+  const count = Math.max(2, Math.min(8, Number($('#aiStoryboardCount').value) || 4));
+  const model = $('#aiStoryboardModel').value.trim() || 'google/gemini-2.5-flash';
+  const statusEl = $('#aiStoryboardStatus');
+  statusEl.textContent = 'AI đang viết storyboard, chờ một lát...';
+  try {
+    const base = (connections.openrouter.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+    const sys = 'Bạn là biên kịch video ngắn bán hàng kiểu affiliate, phong cách vui, gần gũi, tiếng Việt. Trả về DUY NHẤT một JSON hợp lệ, không giải thích, không markdown: {"scenes":[{"text":"...","duration":7,"imagePrompt":"..."}]}. Mỗi cảnh: text là chữ/thoại hiển thị trên màn hình (ngắn gọn, tối đa 12 từ, tiếng Việt, có thể có 1 từ nhấn mạnh VIẾT HOA); duration là số giây (số, 3-10); imagePrompt là mô tả ảnh 9:16 cho cảnh đó bằng tiếng Anh, phong cách live-action hiện đại, ấm áp.';
+    const userMsg = 'Viết storyboard ' + count + ' cảnh cho video này: ' + idea + '. Tổng thời lượng khoảng ' + (count * 7) + ' giây. Cảnh 1 gây tò mò, cảnh giữa có tình huống dở khóc dở cười, cảnh cuối vui vẻ và giới thiệu sản phẩm.';
+    const res = await fetch(base + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Edit Video Affiliate',
+        Authorization: 'Bear' + 'er ' + key
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: userMsg }
+        ],
+        temperature: 0.8,
+        response_format: { type: 'json_object' }
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = (data && data.error && data.error.message) || ('OpenRouter trả về lỗi ' + res.status);
+      throw new Error(msg);
+    }
+    const raw = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    const scenes = (parsed.scenes || []).filter((s) => s && s.text);
+    if (!scenes.length) throw new Error('AI không trả về cảnh nào.');
+    if (!current) return;
+    const libImages = Array.from(images.values());
+    scenes.slice(0, count).forEach((s, i) => {
+      const img = libImages[i] || null;
+      current.scenes.push({
+        id: uid(),
+        imageId: img ? img.id : null,
+        text: String(s.text).slice(0, 120),
+        duration: Math.max(1, Math.min(30, Number(s.duration) || 7)),
+        imagePrompt: s.imagePrompt ? String(s.imagePrompt).slice(0, 300) : ''
+      });
+    });
+    saveCurrentProject();
+    renderStoryboard();
+    renderTimeline();
+    drawPreviewFrame(preview.offset);
+    statusEl.textContent = 'Đã tạo ' + Math.min(scenes.length, count) + ' cảnh. Kiểm tra lại chữ/thời lượng, gắn ảnh cho cảnh chưa có ảnh rồi sang bước Timeline.';
+    showToast('Đã tạo storyboard bằng AI.');
+  } catch (e) {
+    statusEl.textContent = 'Tạo storyboard thất bại: ' + e.message;
+    showToast('Tạo storyboard thất bại: ' + e.message);
+  }
+}
+
 /* ---------------- Storyboard ---------------- */
 function addScene(imageId) {
   if (!current) return;
@@ -544,7 +609,7 @@ function renderStoryboard() {
   list.innerHTML = scenes.map((s, i) => {
     const im = images.get(s.imageId);
     const thumb = im ? im.url : '';
-    const alt = im ? esc(im.name) : 'Ảnh đã xóa';
+    const alt = im ? esc(im.name) : (s.imageId ? 'Ảnh đã xóa' : 'Chưa có ảnh');
     return '<div class="scene-card" draggable="true" data-id="' + esc(s.id) + '">' +
       '<img class="scene-thumb" src="' + esc(thumb) + '" alt="' + alt + '">' +
       '<div class="scene-body">' +
@@ -553,6 +618,7 @@ function renderStoryboard() {
         '<div class="scene-meta">' +
           '<label>Thời lượng (giây) <input type="number" data-field="duration" data-id="' + esc(s.id) + '" min="1" max="30" step="0.5" value="' + esc(s.duration) + '"></label>' +
         '</div>' +
+        (s.imagePrompt ? '<p class="hint">Gợi ý ảnh: ' + esc(s.imagePrompt) + '</p>' : '') +
       '</div>' +
       '<div class="scene-actions">' +
         '<button type="button" class="btn" data-act="up" data-id="' + esc(s.id) + '" title="Lên trên">↑</button>' +
@@ -1374,6 +1440,7 @@ function bindStaticEvents() {
     if (!sel.value) { showToast('Thư viện chưa có ảnh nào. Thêm ảnh ở bước 1 trước.'); return; }
     addScene(sel.value);
   });
+  $('#btnAiStoryboard').addEventListener('click', generateStoryboardAI);
   const sceneList = $('#sceneList');
   sceneList.addEventListener('input', (e) => {
     const f = e.target.closest('[data-field]');

@@ -287,6 +287,15 @@ label input, label select, label textarea { margin-top: 0.25rem; font-weight: 40
   padding: 0.8rem;
   margin-top: 0.8rem;
 }
+.ai-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 0.8rem;
+  box-shadow: var(--shadow);
+  margin: 0.8rem 0;
+}
+.ai-box h3 { margin: 0 0 0.4rem; }
 .music-box {
   border: 1px solid var(--line);
   border-radius: var(--radius);
